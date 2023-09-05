@@ -142,6 +142,7 @@ static void addTileAndDistributePasses(OpPassManager &pm) {
       createFoldAffineMinInDistributedLoopsPass());
   nestedModulePM.addPass(createCanonicalizerPass());
   nestedModulePM.addPass(createCSEPass());
+
   nestedModulePM.addNestedPass<func::FuncOp>(
       createFuseTensorPadWithConsumerPass());
   nestedModulePM.addNestedPass<func::FuncOp>(
@@ -350,6 +351,7 @@ void addCPUBufferOpsTileAndVectorizePipeline(OpPassManager &passManager,
         createHoistRedundantVectorTransfersPass());
     nestedModulePM.addNestedPass<func::FuncOp>(createCanonicalizerPass());
     nestedModulePM.addNestedPass<func::FuncOp>(createCSEPass());
+
   }
 
   // Run IREE specific passes before vector lowering expert.
@@ -396,6 +398,7 @@ void addDoubleTilingPadExpertPassPipeline(OpPassManager &passManager,
         createHoistRedundantVectorTransfersPass());
     nestedModulePM.addNestedPass<func::FuncOp>(createCanonicalizerPass());
     nestedModulePM.addNestedPass<func::FuncOp>(createCSEPass());
+
   }
 
   addBufferizePasses(nestedModulePM);
@@ -495,6 +498,7 @@ void addMultiTilingExpertPassPipeline(
     nestedModulePM.addNestedPass<func::FuncOp>(createCanonicalizerPass());
     nestedModulePM.addNestedPass<func::FuncOp>(createCSEPass());
 
+
     GenericVectorizationPassOptions options;
     options.enableVectorMasking = enableVectorMasking;
     options.vectorizePadding = true;
@@ -505,6 +509,7 @@ void addMultiTilingExpertPassPipeline(
         createHoistRedundantVectorTransfersPass());
     nestedModulePM.addNestedPass<func::FuncOp>(createCanonicalizerPass());
     nestedModulePM.addNestedPass<func::FuncOp>(createCSEPass());
+
   }
 
   addBufferizePasses(nestedModulePM);
@@ -560,6 +565,7 @@ void addConvTileAndDecomposeExpertPassPipeline(OpPassManager &passManager,
 
   {
     nestedModulePM.addNestedPass<func::FuncOp>(createVectorizePadPass());
+    nestedModulePM.addNestedPass<func::FuncOp>(createLinalgFlattenVectors());
     GenericVectorizationPassOptions options;
     options.enableVectorMasking = enableVectorMasking;
     options.vectorizePadding = true;
@@ -570,6 +576,7 @@ void addConvTileAndDecomposeExpertPassPipeline(OpPassManager &passManager,
         createHoistRedundantVectorTransfersPass());
     nestedModulePM.addNestedPass<func::FuncOp>(createCanonicalizerPass());
     nestedModulePM.addNestedPass<func::FuncOp>(createCSEPass());
+
   }
 
   // Eliminate redundant transfer_read/write to avoid stack allocations.
@@ -625,6 +632,7 @@ void addMmt4dTilingExpertPassPipeline(OpPassManager &passManager,
   nestedModulePM.addNestedPass<func::FuncOp>(createCanonicalizerPass());
   nestedModulePM.addNestedPass<func::FuncOp>(createCSEPass());
 
+
   addBufferizePasses(nestedModulePM);
 
   if (!enableMicrokernels) {
@@ -653,6 +661,7 @@ void addCPUDataTilingPipeline(OpPassManager &passManager,
         createHoistRedundantVectorTransfersPass());
     nestedModulePM.addNestedPass<func::FuncOp>(createCanonicalizerPass());
     nestedModulePM.addNestedPass<func::FuncOp>(createCSEPass());
+
   }
 
   addBufferizePasses(nestedModulePM);
@@ -669,6 +678,12 @@ void addCPUDefaultPassPipeline(OpPassManager &passManager) {
   addTileAndDistributePasses(passManager);
   OpPassManager &nestedModulePM = passManager.nest<ModuleOp>();
   addBufferizePasses(nestedModulePM);
+  GenericVectorizationPassOptions options;
+  options.vectorizePadding = true;
+  nestedModulePM.addNestedPass<func::FuncOp>(
+      createGenericVectorizationPass(options));
+  nestedModulePM.addNestedPass<func::FuncOp>(
+      createHoistRedundantVectorTransfersPass());
 }
 
 void addTransformDialectPasses(OpPassManager &passManager) {
@@ -709,6 +724,7 @@ static void addLowerToLLVMPasses(OpPassManager &passManager) {
   passManager.addNestedPass<func::FuncOp>(createCanonicalizerPass());
   passManager.addNestedPass<func::FuncOp>(createCSEPass());
 
+
   // Handled tensor-type constants.
   passManager.addPass(arith::createConstantBufferizePass());
   passManager.addPass(createFoldTensorExtractOpPass());
@@ -745,6 +761,7 @@ static void addLowerToLLVMPasses(OpPassManager &passManager) {
   passManager.addPass(createEmulateNarrowTypePass());
   passManager.addPass(createCanonicalizerPass());
   passManager.addPass(createCSEPass());
+
   if (clInstrumentMemoryAccesses) {
     passManager.addNestedPass<func::FuncOp>(
         createInstrumentMemoryAccessesPass());
@@ -758,6 +775,7 @@ static void addLowerToLLVMPasses(OpPassManager &passManager) {
 
   passManager.addPass(createCanonicalizerPass());
   passManager.addPass(createCSEPass());
+
   passManager.addNestedPass<LLVM::LLVMFuncOp>(createAddFastMathFlagsPass());
 }
 
